@@ -33,8 +33,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or_else(|| panic!("Unable to find PORT environment variable"));
-    let address = env::var("ADDRESS")
-        .unwrap_or_else(|_| panic!("Unable to find ADDRESS environment variable"));
+    let base_url = env::var("BASE_URL")
+        .unwrap_or_else(|_| panic!("Unable to find BASE_URL environment variable"));
 
     let config = ConfigBuilder::default()
         .client(
@@ -145,7 +145,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .to(resources),
             )
     })
-    .bind((address, port))?
+    .bind((base_url, port))?
     .run()
     .await?;
 
