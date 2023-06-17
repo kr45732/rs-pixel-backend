@@ -1,0 +1,20 @@
+[package]
+name = "rs-pixel-backend"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/kr45732/rs-pixel-backend"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+actix-web = "4.3.1"
+dotenv = "0.15.0"
+tokio = { version = "1.28.2", features = ["sync"]}
+rs-pixel = { path = "../RsPixel" }
+serde = { version = "1.0.147", features = ["derive"] }
+surf = { version = "2.3.2", features = ["curl-client"] }
+
+[profile.release]
+codegen-units = 1
+debug = true
+lto = true
