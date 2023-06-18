@@ -23,16 +23,18 @@ pub struct GuildQuery {
     pub id: Option<String>,
     pub name: Option<String>,
     pub player: Option<String>,
-    pub player_username: Option<String>,
+    pub username: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct StatusQuery {
+    pub username: Option<String>,
     pub uuid: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct RecentGamesQuery {
+    pub username: Option<String>,
     pub uuid: Option<String>,
 }
 
@@ -58,7 +60,7 @@ pub struct AuctionQuery {
     pub player: Option<String>,
     pub uuid: Option<String>,
     pub profile: Option<String>,
-    pub player_username: Option<String>,
+    pub username: Option<String>,
 }
 
 #[derive(Deserialize)]

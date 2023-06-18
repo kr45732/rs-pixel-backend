@@ -4,16 +4,56 @@ use crate::{
         SkyblockAuctionQuery, SkyblockBingoQuery, SkyblockProfileQuery, SkyblockProfilesQuery,
         StatusQuery, WebData,
     },
-    utils::{bad_request, error_response, ok, RESOURCES},
+    utils::{bad_request, error_response, ok, HYPIXEL_ENDPOINTS},
 };
 use actix_web::{
+    dev::{ServiceFactory, ServiceRequest},
     get,
-    web::{Data, Path, Query},
-    Responder,
+    web::{resource, Data, Path, Query, Redirect},
+    App, Responder,
 };
 
+pub fn add_endpoint<T>(app: App<T>, value: &str) -> App<T>
+where
+    T: ServiceFactory<ServiceRequest, Config = (), InitError = (), Error = actix_web::Error>,
+{
+    match value {
+        "KEY" => app.service(key),
+        "BOOSTERS" => app.service(boosters),
+        "LEADERBOARDS" => app.service(leaderboards),
+        "PUNISHMENT_STATS" => app.service(punishment_stats),
+        "PLAYER" => app.service(player),
+        "GUILD" => app.service(guild),
+        "COUNTS" => app.service(counts),
+        "STATUS" => app.service(status),
+        "RECENT_GAMES" => app.service(recent_games),
+        "SKYBLOCK_PROFILES" => app.service(skyblock_profiles),
+        "SKYBLOCK_PROFILE" => app.service(skyblock_profile),
+        "SKYBLOCK_BINGO" => app.service(skyblock_bingo),
+        "SKYBLOCK_NEWS" => app.service(skyblock_auction),
+        "SKYBLOCK_AUCTION" => app.service(skyblock_auction),
+        "SKYBLOCK_AUCTIONS" => app.service(skyblock_auctions),
+        "SKYBLOCK_AUCTIONS_ENDED" => app.service(skyblock_auctions_ended),
+        "SKYBLOCK_BAZAAR" => app.service(skyblock_bazaar),
+        "SKYBLOCK_FIRESALES" => app.service(skyblock_fire_sales),
+        "RESOURCES" => app.service(
+            resource([
+                "resources",
+                "resources/{resource}",
+                "resources/{resource}/{sub_resource}",
+            ])
+            .to(resources),
+        ),
+        _ => panic!("Unable to parse server endpoint from {value}"),
+    }
+}
+
+pub async fn default() -> impl Responder {
+    Redirect::to("https://github.com/kr45732/rs-pixel-backend").permanent()
+}
+
 #[get("/key")]
-pub async fn key(web_data: Data<WebData>) -> impl Responder {
+async fn key(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_key().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -21,7 +61,7 @@ pub async fn key(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/boosters")]
-pub async fn boosters(web_data: Data<WebData>) -> impl Responder {
+async fn boosters(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_boosters().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -29,7 +69,7 @@ pub async fn boosters(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/leaderboards")]
-pub async fn leaderboards(web_data: Data<WebData>) -> impl Responder {
+async fn leaderboards(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_leaderboards().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -37,7 +77,7 @@ pub async fn leaderboards(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/punishmentstats")]
-pub async fn punishment_stats(web_data: Data<WebData>) -> impl Responder {
+async fn punishment_stats(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_punishment_stats().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -45,7 +85,7 @@ pub async fn punishment_stats(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/player")]
-pub async fn player(web_data: Data<WebData>, query: Query<PlayerQuery>) -> impl Responder {
+async fn player(web_data: Data<WebData>, query: Query<PlayerQuery>) -> impl Responder {
     if query.username.is_none() && query.uuid.is_none() {
         return bad_request("Missing one or more fields [username, uuid]");
     }
@@ -68,18 +108,18 @@ pub async fn player(web_data: Data<WebData>, query: Query<PlayerQuery>) -> impl 
 }
 
 #[get("/guild")]
-pub async fn guild(web_data: Data<WebData>, query: Query<GuildQuery>) -> impl Responder {
+async fn guild(web_data: Data<WebData>, query: Query<GuildQuery>) -> impl Responder {
     let res;
     if let Some(id) = &query.id {
         res = web_data.api.lock().await.get_guild_by_id(id).await
     } else if let Some(name) = &query.name {
         res = web_data.api.lock().await.get_guild_by_name(name).await
-    } else if query.player.is_some() || query.player_username.is_some() {
+    } else if query.player.is_some() || query.username.is_some() {
         let uuid;
         if let Some(uuid_unwrap) = &query.player {
             uuid = uuid_unwrap.to_string();
         } else {
-            let username = query.player_username.clone().unwrap();
+            let username = query.username.clone().unwrap();
             match web_data.api.lock().await.username_to_uuid(&username).await {
                 Ok(res) => uuid = res.uuid,
                 Err(err) => return error_response(err),
@@ -88,7 +128,7 @@ pub async fn guild(web_data: Data<WebData>, query: Query<GuildQuery>) -> impl Re
 
         res = web_data.api.lock().await.get_guild_by_player(&uuid).await
     } else {
-        return bad_request("Missing one or more fields [id, name, player, player_username]");
+        return bad_request("Missing one or more fields [id, name, player, username]");
     }
 
     match res {
@@ -98,7 +138,7 @@ pub async fn guild(web_data: Data<WebData>, query: Query<GuildQuery>) -> impl Re
 }
 
 #[get("/counts")]
-pub async fn counts(web_data: Data<WebData>) -> impl Responder {
+async fn counts(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_counts().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -106,34 +146,53 @@ pub async fn counts(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/status")]
-pub async fn status(web_data: Data<WebData>, query: Query<StatusQuery>) -> impl Responder {
-    if let Some(uuid) = &query.uuid {
-        match web_data.api.lock().await.get_status(uuid).await {
-            Ok(res) => ok(res),
-            Err(err) => error_response(err),
-        }
+async fn status(web_data: Data<WebData>, query: Query<StatusQuery>) -> impl Responder {
+    if query.username.is_none() && query.uuid.is_none() {
+        return bad_request("Missing one or more fields [username, uuid]");
+    }
+
+    let uuid;
+    if let Some(uuid_unwrap) = &query.uuid {
+        uuid = uuid_unwrap.to_string();
     } else {
-        bad_request("Missing one or more fields [uuid]")
+        let username = query.username.clone().unwrap();
+        match web_data.api.lock().await.username_to_uuid(&username).await {
+            Ok(res) => uuid = res.uuid,
+            Err(err) => return error_response(err),
+        }
+    }
+
+    match web_data.api.lock().await.get_status(&uuid).await {
+        Ok(res) => ok(res),
+        Err(err) => error_response(err),
     }
 }
 
 #[get("/recentGames")]
-pub async fn recent_games(
-    web_data: Data<WebData>,
-    query: Query<RecentGamesQuery>,
-) -> impl Responder {
-    if let Some(uuid) = &query.uuid {
-        match web_data.api.lock().await.get_recent_games(uuid).await {
-            Ok(res) => ok(res),
-            Err(err) => error_response(err),
-        }
+async fn recent_games(web_data: Data<WebData>, query: Query<RecentGamesQuery>) -> impl Responder {
+    if query.username.is_none() && query.uuid.is_none() {
+        return bad_request("Missing one or more fields [username, uuid]");
+    }
+
+    let uuid;
+    if let Some(uuid_unwrap) = &query.uuid {
+        uuid = uuid_unwrap.to_string();
     } else {
-        bad_request("Missing one or more fields [uuid]")
+        let username = query.username.clone().unwrap();
+        match web_data.api.lock().await.username_to_uuid(&username).await {
+            Ok(res) => uuid = res.uuid,
+            Err(err) => return error_response(err),
+        }
+    }
+
+    match web_data.api.lock().await.get_recent_games(&uuid).await {
+        Ok(res) => ok(res),
+        Err(err) => error_response(err),
     }
 }
 
 #[get("/skyblock/profiles")]
-pub async fn skyblock_profiles(
+async fn skyblock_profiles(
     web_data: Data<WebData>,
     query: Query<SkyblockProfilesQuery>,
 ) -> impl Responder {
@@ -159,7 +218,7 @@ pub async fn skyblock_profiles(
 }
 
 #[get("/skyblock/profile")]
-pub async fn skyblock_profile(
+async fn skyblock_profile(
     web_data: Data<WebData>,
     query: Query<SkyblockProfileQuery>,
 ) -> impl Responder {
@@ -180,7 +239,7 @@ pub async fn skyblock_profile(
 }
 
 #[get("/skyblock/bingo")]
-pub async fn skyblock_bingo(
+async fn skyblock_bingo(
     query: Query<SkyblockBingoQuery>,
     web_data: Data<WebData>,
 ) -> impl Responder {
@@ -206,7 +265,7 @@ pub async fn skyblock_bingo(
 }
 
 #[get("/skyblock/news")]
-pub async fn skyblock_news(web_data: Data<WebData>) -> impl Responder {
+async fn skyblock_news(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_skyblock_news().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -214,17 +273,14 @@ pub async fn skyblock_news(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/skyblock/auction")]
-pub async fn skyblock_auction(
-    web_data: Data<WebData>,
-    query: Query<AuctionQuery>,
-) -> impl Responder {
+async fn skyblock_auction(web_data: Data<WebData>, query: Query<AuctionQuery>) -> impl Responder {
     let res;
-    if query.player.is_some() || query.player_username.is_some() {
+    if query.player.is_some() || query.username.is_some() {
         let uuid;
         if let Some(uuid_unwrap) = &query.player {
             uuid = uuid_unwrap.to_string();
         } else {
-            let username = query.player_username.clone().unwrap();
+            let username = query.username.clone().unwrap();
             match web_data.api.lock().await.username_to_uuid(&username).await {
                 Ok(res) => uuid = res.uuid,
                 Err(err) => return error_response(err),
@@ -252,7 +308,7 @@ pub async fn skyblock_auction(
             .get_skyblock_auction_by_profile(profile)
             .await
     } else {
-        return bad_request("Missing one or more fields [player, uuid, profile, player_username]");
+        return bad_request("Missing one or more fields [player, uuid, profile, username]");
     }
 
     match res {
@@ -262,7 +318,7 @@ pub async fn skyblock_auction(
 }
 
 #[get("/skyblock/auctions")]
-pub async fn skyblock_auctions(
+async fn skyblock_auctions(
     web_data: Data<WebData>,
     query: Query<SkyblockAuctionQuery>,
 ) -> impl Responder {
@@ -279,7 +335,7 @@ pub async fn skyblock_auctions(
 }
 
 #[get("/skyblock/auctions_ended")]
-pub async fn skyblock_auctions_ended(web_data: Data<WebData>) -> impl Responder {
+async fn skyblock_auctions_ended(web_data: Data<WebData>) -> impl Responder {
     match web_data
         .api
         .lock()
@@ -293,7 +349,7 @@ pub async fn skyblock_auctions_ended(web_data: Data<WebData>) -> impl Responder 
 }
 
 #[get("/skyblock/bazaar")]
-pub async fn skyblock_bazaar(web_data: Data<WebData>) -> impl Responder {
+async fn skyblock_bazaar(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_skyblock_bazaar().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
@@ -301,24 +357,24 @@ pub async fn skyblock_bazaar(web_data: Data<WebData>) -> impl Responder {
 }
 
 #[get("/skyblock/firesales")]
-pub async fn skyblock_fire_sales(web_data: Data<WebData>) -> impl Responder {
+async fn skyblock_fire_sales(web_data: Data<WebData>) -> impl Responder {
     match web_data.api.lock().await.get_skyblock_fire_sales().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
 }
 
-pub async fn resources(web_data: Data<WebData>, path: Path<ResourcesPath>) -> impl Responder {
+async fn resources(web_data: Data<WebData>, path: Path<ResourcesPath>) -> impl Responder {
     if let Some(resource) = &path.resource {
-        let mut resource_path = format!("resources/{resource}");
+        let resource_path = if let Some(sub_resource) = &path.sub_resource {
+            format!("resources/{resource}/{sub_resource}")
+        } else {
+            format!("resources/{resource}")
+        };
 
-        if let Some(sub_resource) = &path.sub_resource {
-            resource_path = format!("resources/{resource}/{sub_resource}");
-        }
-
-        for resource_enum in RESOURCES {
-            if resource_enum.get_path() == resource_path {
-                return match web_data.api.lock().await.get_resources(resource_enum).await {
+        for endpoint in HYPIXEL_ENDPOINTS {
+            if endpoint.2 && endpoint.1.get_path() == resource_path {
+                return match web_data.api.lock().await.get_resources(endpoint.1).await {
                     Ok(res) => ok(res),
                     Err(err) => error_response(err),
                 };
