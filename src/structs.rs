@@ -1,6 +1,6 @@
 use rs_pixel::RsPixel;
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 
 pub struct WebData {
     pub api: Mutex<RsPixel>,

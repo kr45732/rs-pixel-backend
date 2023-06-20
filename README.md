@@ -5,8 +5,6 @@
 [Discord]: https://img.shields.io/discord/796790757947867156?color=4166f5&label=discord&style=flat-square
 [discord link]: https://dsc.gg/skyblock-plus
 
-### Note: this is still a work in progress and breaking changes may occur
-
 ## Set Up
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install)
@@ -19,7 +17,7 @@
 - Run `cargo run --release` (may take some time to build)
 - Use the API!
 
-### Configuration Fields or Environment Variables
+### Required Configuration Fields
 - `BASE_URL`: Base address to bind to (e.g. 0.0.0.0)
 - `PORT`: Port to bind to (e.g. 8000)
   - Online hosts will automatically set this
@@ -27,7 +25,45 @@
 
 ## Usage
 ### Endpoints
-- Endpoints are the same as found in Hypixel's [documentation](https://api.hypixel.net)
+- /key
+- /boosters
+- /leaderboards
+- /punishmentstats
+- /player
+  - username
+  - uuid
+- /guild
+  - id
+  - name
+  - player
+  - username
+- /counts
+- /status
+  - username
+  - uuid
+- /recentGames
+  - username
+  - uuid
+- /skyblock/profiles
+  - username
+  - uuid
+- /skyblock/profile
+  - profile
+- /skyblock/bingo
+  - username
+  - uuid
+- /skyblock/news
+- /skyblock/auction
+  - player
+  - uuid
+  - profile
+  - username
+- /skyblock/auctions
+  - page
+- /skyblock/auctions_ended
+- /skyblock/bazaar
+- /skyblock/firesales
+- /resources/{resource}/{sub_resource}
 
 ### Documentation & Examples
 - Coming soon
@@ -46,8 +82,9 @@ Steps to deploy on [Gigalixir](https://gigalixir.com/):
 6. Deploy app: `git push gigalixir`
 7. Acess at [https://NAME.gigalixirapp.com/](https://NAME.gigalixirapp.com/)
 
-
 # License & Contributing
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT) at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this repository by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+# Note: this is still a work in progress

@@ -7,36 +7,32 @@ use crate::{
     utils::{bad_request, error_response, ok, HYPIXEL_ENDPOINTS},
 };
 use actix_web::{
-    dev::{ServiceFactory, ServiceRequest},
     get,
-    web::{resource, Data, Path, Query, Redirect},
-    App, Responder,
+    web::{resource, Data, Path, Query, Redirect, ServiceConfig},
+    Responder,
 };
 
-pub fn add_endpoint<T>(app: App<T>, value: &str) -> App<T>
-where
-    T: ServiceFactory<ServiceRequest, Config = (), InitError = (), Error = actix_web::Error>,
-{
+pub fn add_endpoint(config: &mut ServiceConfig, value: &str) {
     match value {
-        "KEY" => app.service(key),
-        "BOOSTERS" => app.service(boosters),
-        "LEADERBOARDS" => app.service(leaderboards),
-        "PUNISHMENT_STATS" => app.service(punishment_stats),
-        "PLAYER" => app.service(player),
-        "GUILD" => app.service(guild),
-        "COUNTS" => app.service(counts),
-        "STATUS" => app.service(status),
-        "RECENT_GAMES" => app.service(recent_games),
-        "SKYBLOCK_PROFILES" => app.service(skyblock_profiles),
-        "SKYBLOCK_PROFILE" => app.service(skyblock_profile),
-        "SKYBLOCK_BINGO" => app.service(skyblock_bingo),
-        "SKYBLOCK_NEWS" => app.service(skyblock_auction),
-        "SKYBLOCK_AUCTION" => app.service(skyblock_auction),
-        "SKYBLOCK_AUCTIONS" => app.service(skyblock_auctions),
-        "SKYBLOCK_AUCTIONS_ENDED" => app.service(skyblock_auctions_ended),
-        "SKYBLOCK_BAZAAR" => app.service(skyblock_bazaar),
-        "SKYBLOCK_FIRESALES" => app.service(skyblock_fire_sales),
-        "RESOURCES" => app.service(
+        "KEY" => config.service(key),
+        "BOOSTERS" => config.service(boosters),
+        "LEADERBOARDS" => config.service(leaderboards),
+        "PUNISHMENT_STATS" => config.service(punishment_stats),
+        "PLAYER" => config.service(player),
+        "GUILD" => config.service(guild),
+        "COUNTS" => config.service(counts),
+        "STATUS" => config.service(status),
+        "RECENT_GAMES" => config.service(recent_games),
+        "SKYBLOCK_PROFILES" => config.service(skyblock_profiles),
+        "SKYBLOCK_PROFILE" => config.service(skyblock_profile),
+        "SKYBLOCK_BINGO" => config.service(skyblock_bingo),
+        "SKYBLOCK_NEWS" => config.service(skyblock_auction),
+        "SKYBLOCK_AUCTION" => config.service(skyblock_auction),
+        "SKYBLOCK_AUCTIONS" => config.service(skyblock_auctions),
+        "SKYBLOCK_AUCTIONS_ENDED" => config.service(skyblock_auctions_ended),
+        "SKYBLOCK_BAZAAR" => config.service(skyblock_bazaar),
+        "SKYBLOCK_FIRESALES" => config.service(skyblock_fire_sales),
+        "RESOURCES" => config.service(
             resource([
                 "resources",
                 "resources/{resource}",
@@ -45,7 +41,7 @@ where
             .to(resources),
         ),
         _ => panic!("Unable to parse server endpoint from {value}"),
-    }
+    };
 }
 
 pub async fn default() -> impl Responder {
@@ -54,7 +50,7 @@ pub async fn default() -> impl Responder {
 
 #[get("/key")]
 async fn key(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_key().await {
+    match web_data.api.lock().unwrap().get_key().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -62,7 +58,7 @@ async fn key(web_data: Data<WebData>) -> impl Responder {
 
 #[get("/boosters")]
 async fn boosters(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_boosters().await {
+    match web_data.api.lock().unwrap().get_boosters().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -70,7 +66,7 @@ async fn boosters(web_data: Data<WebData>) -> impl Responder {
 
 #[get("/leaderboards")]
 async fn leaderboards(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_leaderboards().await {
+    match web_data.api.lock().unwrap().get_leaderboards().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -78,7 +74,7 @@ async fn leaderboards(web_data: Data<WebData>) -> impl Responder {
 
 #[get("/punishmentstats")]
 async fn punishment_stats(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_punishment_stats().await {
+    match web_data.api.lock().unwrap().get_punishment_stats().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -95,13 +91,19 @@ async fn player(web_data: Data<WebData>, query: Query<PlayerQuery>) -> impl Resp
         uuid = uuid_unwrap.to_string();
     } else {
         let username = query.username.clone().unwrap();
-        match web_data.api.lock().await.username_to_uuid(&username).await {
+        match web_data
+            .api
+            .lock()
+            .unwrap()
+            .username_to_uuid(&username)
+            .await
+        {
             Ok(res) => uuid = res.uuid,
             Err(err) => return error_response(err),
         }
     }
 
-    match web_data.api.lock().await.get_player(&uuid).await {
+    match web_data.api.lock().unwrap().get_player(&uuid).await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -111,22 +113,33 @@ async fn player(web_data: Data<WebData>, query: Query<PlayerQuery>) -> impl Resp
 async fn guild(web_data: Data<WebData>, query: Query<GuildQuery>) -> impl Responder {
     let res;
     if let Some(id) = &query.id {
-        res = web_data.api.lock().await.get_guild_by_id(id).await
+        res = web_data.api.lock().unwrap().get_guild_by_id(id).await
     } else if let Some(name) = &query.name {
-        res = web_data.api.lock().await.get_guild_by_name(name).await
+        res = web_data.api.lock().unwrap().get_guild_by_name(name).await
     } else if query.player.is_some() || query.username.is_some() {
         let uuid;
         if let Some(uuid_unwrap) = &query.player {
             uuid = uuid_unwrap.to_string();
         } else {
             let username = query.username.clone().unwrap();
-            match web_data.api.lock().await.username_to_uuid(&username).await {
+            match web_data
+                .api
+                .lock()
+                .unwrap()
+                .username_to_uuid(&username)
+                .await
+            {
                 Ok(res) => uuid = res.uuid,
                 Err(err) => return error_response(err),
             }
         }
 
-        res = web_data.api.lock().await.get_guild_by_player(&uuid).await
+        res = web_data
+            .api
+            .lock()
+            .unwrap()
+            .get_guild_by_player(&uuid)
+            .await
     } else {
         return bad_request("Missing one or more fields [id, name, player, username]");
     }
@@ -139,7 +152,7 @@ async fn guild(web_data: Data<WebData>, query: Query<GuildQuery>) -> impl Respon
 
 #[get("/counts")]
 async fn counts(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_counts().await {
+    match web_data.api.lock().unwrap().get_counts().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -156,13 +169,19 @@ async fn status(web_data: Data<WebData>, query: Query<StatusQuery>) -> impl Resp
         uuid = uuid_unwrap.to_string();
     } else {
         let username = query.username.clone().unwrap();
-        match web_data.api.lock().await.username_to_uuid(&username).await {
+        match web_data
+            .api
+            .lock()
+            .unwrap()
+            .username_to_uuid(&username)
+            .await
+        {
             Ok(res) => uuid = res.uuid,
             Err(err) => return error_response(err),
         }
     }
 
-    match web_data.api.lock().await.get_status(&uuid).await {
+    match web_data.api.lock().unwrap().get_status(&uuid).await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -179,13 +198,19 @@ async fn recent_games(web_data: Data<WebData>, query: Query<RecentGamesQuery>) -
         uuid = uuid_unwrap.to_string();
     } else {
         let username = query.username.clone().unwrap();
-        match web_data.api.lock().await.username_to_uuid(&username).await {
+        match web_data
+            .api
+            .lock()
+            .unwrap()
+            .username_to_uuid(&username)
+            .await
+        {
             Ok(res) => uuid = res.uuid,
             Err(err) => return error_response(err),
         }
     }
 
-    match web_data.api.lock().await.get_recent_games(&uuid).await {
+    match web_data.api.lock().unwrap().get_recent_games(&uuid).await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -205,13 +230,25 @@ async fn skyblock_profiles(
         uuid = uuid_unwrap.to_string();
     } else {
         let username = query.username.clone().unwrap();
-        match web_data.api.lock().await.username_to_uuid(&username).await {
+        match web_data
+            .api
+            .lock()
+            .unwrap()
+            .username_to_uuid(&username)
+            .await
+        {
             Ok(res) => uuid = res.uuid,
             Err(err) => return error_response(err),
         }
     }
 
-    match web_data.api.lock().await.get_skyblock_profiles(&uuid).await {
+    match web_data
+        .api
+        .lock()
+        .unwrap()
+        .get_skyblock_profiles(&uuid)
+        .await
+    {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -226,7 +263,7 @@ async fn skyblock_profile(
         match web_data
             .api
             .lock()
-            .await
+            .unwrap()
             .get_skyblock_profile(profile)
             .await
         {
@@ -252,13 +289,19 @@ async fn skyblock_bingo(
         uuid = uuid_unwrap.to_string();
     } else {
         let username = query.username.clone().unwrap();
-        match web_data.api.lock().await.username_to_uuid(&username).await {
+        match web_data
+            .api
+            .lock()
+            .unwrap()
+            .username_to_uuid(&username)
+            .await
+        {
             Ok(res) => uuid = res.uuid,
             Err(err) => return error_response(err),
         }
     }
 
-    match web_data.api.lock().await.get_skyblock_bingo(&uuid).await {
+    match web_data.api.lock().unwrap().get_skyblock_bingo(&uuid).await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -266,7 +309,7 @@ async fn skyblock_bingo(
 
 #[get("/skyblock/news")]
 async fn skyblock_news(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_skyblock_news().await {
+    match web_data.api.lock().unwrap().get_skyblock_news().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -281,7 +324,13 @@ async fn skyblock_auction(web_data: Data<WebData>, query: Query<AuctionQuery>) -
             uuid = uuid_unwrap.to_string();
         } else {
             let username = query.username.clone().unwrap();
-            match web_data.api.lock().await.username_to_uuid(&username).await {
+            match web_data
+                .api
+                .lock()
+                .unwrap()
+                .username_to_uuid(&username)
+                .await
+            {
                 Ok(res) => uuid = res.uuid,
                 Err(err) => return error_response(err),
             }
@@ -290,21 +339,21 @@ async fn skyblock_auction(web_data: Data<WebData>, query: Query<AuctionQuery>) -
         res = web_data
             .api
             .lock()
-            .await
+            .unwrap()
             .get_skyblock_auction_by_player(&uuid)
             .await
     } else if let Some(uuid) = &query.uuid {
         res = web_data
             .api
             .lock()
-            .await
+            .unwrap()
             .get_skyblock_auction_by_uuid(uuid)
             .await
     } else if let Some(profile) = &query.profile {
         res = web_data
             .api
             .lock()
-            .await
+            .unwrap()
             .get_skyblock_auction_by_profile(profile)
             .await
     } else {
@@ -325,7 +374,7 @@ async fn skyblock_auctions(
     match web_data
         .api
         .lock()
-        .await
+        .unwrap()
         .get_skyblock_auctions(query.page.unwrap_or(0))
         .await
     {
@@ -339,7 +388,7 @@ async fn skyblock_auctions_ended(web_data: Data<WebData>) -> impl Responder {
     match web_data
         .api
         .lock()
-        .await
+        .unwrap()
         .get_skyblock_auctions_ended()
         .await
     {
@@ -350,7 +399,7 @@ async fn skyblock_auctions_ended(web_data: Data<WebData>) -> impl Responder {
 
 #[get("/skyblock/bazaar")]
 async fn skyblock_bazaar(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_skyblock_bazaar().await {
+    match web_data.api.lock().unwrap().get_skyblock_bazaar().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -358,7 +407,7 @@ async fn skyblock_bazaar(web_data: Data<WebData>) -> impl Responder {
 
 #[get("/skyblock/firesales")]
 async fn skyblock_fire_sales(web_data: Data<WebData>) -> impl Responder {
-    match web_data.api.lock().await.get_skyblock_fire_sales().await {
+    match web_data.api.lock().unwrap().get_skyblock_fire_sales().await {
         Ok(res) => ok(res),
         Err(err) => error_response(err),
     }
@@ -374,7 +423,7 @@ async fn resources(web_data: Data<WebData>, path: Path<ResourcesPath>) -> impl R
 
         for endpoint in HYPIXEL_ENDPOINTS {
             if endpoint.2 && endpoint.1.get_path() == resource_path {
-                return match web_data.api.lock().await.get_resources(endpoint.1).await {
+                return match web_data.api.lock().unwrap().get_resources(endpoint.1).await {
                     Ok(res) => ok(res),
                     Err(err) => error_response(err),
                 };
