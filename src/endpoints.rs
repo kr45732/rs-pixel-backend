@@ -11,7 +11,6 @@ use actix_web::{
     web::{resource, Data, Path, Query, Redirect, ServiceConfig},
     Responder,
 };
-use rs_pixel::HypixelEndpoint;
 
 pub fn add_endpoint(config: &mut ServiceConfig, value: &str) {
     match value {
@@ -243,12 +242,11 @@ async fn skyblock_profiles(
         }
     }
 
-    let api = web_data.api.lock().unwrap();
-    match api
-        .get(
-            HypixelEndpoint::SKYBLOCK_PROFILES,
-            api.to_params("uuid", &uuid),
-        )
+    match web_data
+        .api
+        .lock()
+        .unwrap()
+        .get_skyblock_profiles(&uuid)
         .await
     {
         Ok(res) => ok(res),
