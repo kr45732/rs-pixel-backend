@@ -12,7 +12,7 @@ dotenv = "0.15.0"
 rs-pixel = { path = "../RsPixel", version = "0.2.0" }
 serde = { version = "1.0.164", features = ["derive"] }
 surf = { version = "2.3.2", features = ["curl-client"] }
-actix-governor = { git = "https://github.com/AaronErhardt/actix-governor.git", version = "0.4.0"}
+actix-governor = "0.4.1"
 
 [profile.release]
 codegen-units = 1
